@@ -220,6 +220,3 @@ playwright install
 If script permission denied:
 
 sudo chmod +x /usr/local/bin/esper-login
-✅ convert to a pip-installable package
-
-Just tell me!
