@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+
 import os
 import sys
-import json
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -27,36 +27,46 @@ def generate_api_token(company_id: str, api_key: str) -> str:
         sys.exit(1)
 
     data = res.json()
-    token = (
-        data.get("token") or data.get("apiKey") or data.get("key")
-    )
+    token = data.get("token") or data.get("apiKey") or data.get("key")
 
     if not token:
-        print("ERROR: No token returned:", data)
+        print("ERROR: No API token returned:", data)
         sys.exit(1)
+
     return token
 
 
-def automated_login(endpoint: str, api_token: str):
+def auto_login(endpoint: str, token: str):
     login_url = f"https://{endpoint}.esper.cloud/login?siteadmin=true"
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
+    print("\nOpening browser:", login_url)
 
-        page.goto(login_url, wait_until="networkidle")
+    playwright = sync_playwright().start()
+    browser = playwright.chromium.launch(headless=False)
+    page = browser.new_page()
 
-        selector_input = 'input[data-testid="siteadmin-login-login-input"]'
-        selector_button = 'button[data-testid="siteadmin-login-login-button"]'
+    page.goto(login_url, timeout=60000)
 
-        page.wait_for_selector(selector_input, timeout=20000)
-        page.fill(selector_input, api_token)
+    # Wait for API token input
+    page.wait_for_selector("input[placeholder='API Token']", timeout=60000)
 
-        page.wait_for_selector(selector_button, timeout=20000)
-        page.click(selector_button)
+    # Fill API token
+    page.fill("input[placeholder='API Token']", token)
 
-        print("Login successful. Browser will stay open.")
-        page.wait_for_timeout(5000)
+    # Click login
+    page.click("button[data-testid='siteadmin-login-login-button']")
+
+    print("\n✅ Login submitted successfully")
+    print("🚀 Esper dashboard should now be open")
+    print("🔒 Browser will remain open")
+    print("👉 Press ENTER in terminal when you want to close it")
+
+    # 🔒 THIS is the key line (keeps browser alive)
+    input()
+
+    print("\nClosing browser...")
+    browser.close()
+    playwright.stop()
 
 
 def main():
@@ -68,15 +78,16 @@ def main():
 
     api_key = os.getenv("MC_API_KEY")
     if not api_key:
-        print("ERROR: MC_API_KEY not set.")
+        print("ERROR: MC_API_KEY not set")
+        print('Run: export MC_API_KEY="YOUR_MC_API_KEY"')
         sys.exit(1)
 
     print("Fetching companies...")
     companies = fetch_companies(api_key)
 
-    items = companies.get("data") or companies
+    items = companies.get("data")
     if not isinstance(items, list):
-        print("Invalid companies response:", companies)
+        print("Invalid companies response")
         sys.exit(1)
 
     match = None
@@ -97,12 +108,10 @@ def main():
     print("Endpoint:", match["endpoint"])
     print("ID:", match["id"])
 
-    company_id = match["id"]
-
     print("\nGenerating API token...")
-    token = generate_api_token(company_id, api_key)
+    token = generate_api_token(match["id"], api_key)
 
-    automated_login(match["endpoint"], token)
+    auto_login(match["endpoint"], token)
 
 
 if __name__ == "__main__":
