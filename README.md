@@ -54,9 +54,9 @@ esper-login <tenant-name>
 	2.	Open Chrome DevTools → Network
 	3.	Filter by Fetch / XHR
 	4.	Click any request to:
-
+```
 mission-control-api.esper.cloud
-
+```
 
 	5.	In Request Headers, copy the value of:
 
