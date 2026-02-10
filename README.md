@@ -207,14 +207,6 @@ Get a fresh key from DevTools.
 
 ⸻
 
-🔐 Security Notes
-	•	❌ Never commit API keys
-	•	❌ Never hardcode credentials
-	•	✅ Keys are read from environment variables
-	•	✅ Tokens are generated fresh per login
-
-⸻
-
 🧹 Uninstall / Reset
 
 ```
