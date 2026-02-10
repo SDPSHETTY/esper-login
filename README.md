@@ -3,11 +3,12 @@
 A lightweight CLI tool to quickly log into any Esper tenant using Mission Control.
 
 This tool:
-	•	Fetches all tenants from Mission Control
-	•	Generates a fresh Personal Access Token for the tenant
-	•	Opens the tenant login page
-	•	Automatically pastes the token and logs you in
-	•	Keeps the browser open for normal dashboard usage
+
+- Fetches all tenants from Mission Control
+- Generates a fresh Personal Access Token for the tenant
+- Opens the tenant login page
+- Automatically pastes the token and logs you in
+- Keeps the browser open for normal dashboard usage
 
 ⸻
 
@@ -32,11 +33,12 @@ esper-login <tenant-name>
 
 ⸻
 
-📦 Prerequisites
-	•	macOS
-	•	Python 3.9+
-	•	Google Chrome (or Chromium)
-	•	Access to Mission Control (mc.esper.io)
+## 📦 Prerequisites
+
+- macOS
+- Python 3.9+
+- Google Chrome (or Chromium)
+- Access to Mission Control (mc.esper.io)
 
 ⸻
 
