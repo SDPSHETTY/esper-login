@@ -183,9 +183,11 @@ If multiple matches exist, the script fails safely instead of guessing.
 
 🧪 How It Works (Internals)
 	1.	Calls Mission Control:
+	
 ```
 GET /companies
 ```
+
 
 	2.	Finds matching tenant by endpoint
 	3.	Generates token:
@@ -198,6 +200,7 @@ POST /companies/{id}/personal-access-token
 ```
 https://<tenant>.esper.cloud/login?siteadmin=true
 ```
+
 
 	5.	Uses Playwright to:
 	•	Paste token
