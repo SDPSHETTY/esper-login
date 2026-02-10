@@ -55,22 +55,14 @@ esper-login <tenant-name>
 
 ## 🔎 How to Get Your Mission Control API Key
 
-1. Log in to **Mission Control**
-2. Open **Chrome DevTools → Network**
-3. Filter by **Fetch / XHR**
-4. Click any request to:
+1. Log in to **Mission Control** in your browser.
+2. Open **Chrome DevTools** (Right-click → Inspect).
+3. Go to the **Network** tab.
+4. Filter the network requests by **Fetch / XHR**.
+5. Click on any Mission Control API request.
+6. In the **Request Headers** section, copy the value of the **authorization** header.
 
-```text
-mission-control-api.esper.cloud
-```
-
-	5.	In Request Headers, copy the value of:
-
-authorization
-
-
-
-👉 That value is your Mission Control API key.
+👉 That copied value is your **Mission Control API key**.
 
 ⸻
 
@@ -163,49 +155,16 @@ Expected output:
 esper-login <tenant-name>
 ```
 
-What happens:
-	1.	Tenant is located via Mission Control
-	2.	A fresh API token is generated
-	3.	Browser opens automatically
-	4.	Token is pasted
-	5.	Login is submitted
-	6.	Browser stays open until you press ENTER
+## 🧪 How It Works (Internals)
 
-⸻
-
-🧠 How Matching Works (Important)
-
-Tenant lookup uses:
-	1.	Exact endpoint match first
-	2.	Then safe partial match
-
-This avoids mistakes like:
-	•	dillardstest accidentally matching dillardstestdev
-
-If multiple matches exist, the script fails safely instead of guessing.
-
-⸻
-
-🧪 How It Works (Internals)
-	1.	Fetch tenants:
-
-GET /companies
-
-
-	2.	Find matching tenant by endpoint
-	3.	Generate token:
-
-POST /companies/{id}/personal-access-token
-
-
-	4.	Open tenant login page:
-
-https://<tenant>.esper.cloud/login?siteadmin=true
-
-
-	5.	Playwright:
-	•	Pastes token
-	•	Clicks Login
+1. Fetch tenants from Mission Control  
+2. Find the matching tenant by endpoint  
+3. Generate a fresh API token for the tenant  
+4. Open the tenant login page  
+5. Automate login using Playwright:
+6. Browser stays open until you press ENTER
+   - Paste the API token
+   - Click the Login button
 
 ⸻
 
