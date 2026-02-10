@@ -76,13 +76,16 @@ authorization
 
 ✅ Set the API Key in Terminal
 
+```
 export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"
+```
 
 (Optional – persist across sessions)
 
+```
 echo 'export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"' >> ~/.zshrc
 source ~/.zshrc
-
+```
 
 ⸻
 
