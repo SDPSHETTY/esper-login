@@ -11,7 +11,7 @@ This tool:
 
 ⸻
 
-✨ What Problem This Solves
+✨ **What Problem This Solves**
 
 Normally, to log into a customer tenant you must:
 	1.	Open Mission Control
@@ -24,10 +24,10 @@ Normally, to log into a customer tenant you must:
 	8.	Login
 
 This tool reduces that to one command:
+
 ```
 esper-login <tenant-name>
 ```
-
 
 ⸻
 
@@ -39,7 +39,7 @@ esper-login <tenant-name>
 
 ⸻
 
-🔐 Mission Control API Key (REQUIRED – Per User)
+🔐 **Mission Control API Key (REQUIRED – Per User)**
 
 ⚠️ IMPORTANT
 	•	Every user must use their own Mission Control API key
@@ -49,39 +49,34 @@ esper-login <tenant-name>
 
 ⸻
 
-🔎 How to Get Your Mission Control API Key
-	1.	Log in to https://mc.esper.io
-	2.	Open Chrome DevTools → Network tab
+🔎 **How to Get Your Mission Control API Key**
+	1.	Log in to Mission Control
+	2.	Open Chrome DevTools → Network
 	3.	Filter by Fetch / XHR
 	4.	Click any request to:
 
-```
 mission-control-api.esper.cloud
-```
+
 
 	5.	In Request Headers, copy the value of:
 
-```
 authorization
-```
 
 
-This is your Mission Control API key.
+
+👉 That value is your Mission Control API key.
 
 ⸻
 
 ✅ Set the API Key in Terminal
 
-```
 export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"
-```
 
 (Optional – persist across sessions)
 
-```
 echo 'export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"' >> ~/.zshrc
 source ~/.zshrc
-```
+
 
 ⸻
 
@@ -91,7 +86,7 @@ You have two options.
 
 ⸻
 
-OPTION 1 — Using Virtual Environment (Recommended)
+**OPTION 1 — Using Virtual Environment (Recommended)**
 
 1️⃣ Clone the repo
 
@@ -120,10 +115,9 @@ playwright install
 
 ⸻
 
-OPTION 2 — Without Virtual Environment
+**OPTION 2 — Without Virtual Environment**
 
 ⚠️ Use this only if you know what you’re doing.
-
 ```
 pip3 install --user requests playwright
 playwright install
@@ -131,7 +125,7 @@ playwright install
 
 ⸻
 
-🚀 Install CLI Command
+🚀 **Install CLI Command**
 
 From the project directory:
 
@@ -140,13 +134,13 @@ chmod +x esper_login.py
 sudo cp esper_login.py /usr/local/bin/esper-login
 ```
 
-Verify:
+Verify installation:
 
 ```
 which esper-login
 ```
 
-Expected:
+Expected output:
 
 ```
 /usr/local/bin/esper-login
@@ -172,7 +166,9 @@ What happens:
 
 🧠 How Matching Works (Important)
 
-Tenant lookup uses exact endpoint match first, then safe partial match.
+Tenant lookup uses:
+	1.	Exact endpoint match first
+	2.	Then safe partial match
 
 This avoids mistakes like:
 	•	dillardstest accidentally matching dillardstestdev
@@ -182,62 +178,61 @@ If multiple matches exist, the script fails safely instead of guessing.
 ⸻
 
 🧪 How It Works (Internals)
+	1.	Fetch tenants:
 
-	1.	Calls Mission Control:
-```
 GET /companies
-```
 
-	2.	Finds matching tenant by endpoint
-	3.	Generates token:
-```
+
+	2.	Find matching tenant by endpoint
+	3.	Generate token:
+
 POST /companies/{id}/personal-access-token
-```
 
-	4.	Opens:
-	
-```
+
+	4.	Open tenant login page:
+
 https://<tenant>.esper.cloud/login?siteadmin=true
-```
-	5.	Uses Playwright to:
-	•	Paste token
-	•	Click Login
+
+
+	5.	Playwright:
+	•	Pastes token
+	•	Clicks Login
 
 ⸻
 
 🐛 Troubleshooting
 
 ❌ MC_API_KEY missing
-```
+
 export MC_API_KEY="your-key"
-```
+
 
 ⸻
 
 ❌ ModuleNotFoundError: requests
 
-Make sure you installed dependencies inside the active venv:
-```
+Ensure dependencies are installed inside the active venv:
+
 pip install -r requirements.txt
-```
+
 
 ⸻
 
 ❌ Browser opens then closes
 
 This means:
-	•	The script exited
-	•	Or ENTER was pressed
+	•	The script exited, or
+	•	ENTER was pressed in terminal
 
-The browser stays open until you press ENTER in terminal.
+The browser stays open until ENTER is pressed.
 
 ⸻
 
 ❌ 401 Unauthorized
 
-Your Mission Control API key:
+Your Mission Control API key is:
 	•	Expired, or
-	•	Belongs to a different user
+	•	From a different user
 
 Get a fresh key from DevTools.
 
@@ -246,16 +241,16 @@ Get a fresh key from DevTools.
 🔐 Security Notes
 	•	❌ Never commit API keys
 	•	❌ Never hardcode credentials
-	•	✅ Keys are read from environment only
+	•	✅ Keys are read from environment variables
 	•	✅ Tokens are generated fresh per login
 
 ⸻
 
 🧹 Uninstall / Reset
-```
+
 sudo rm /usr/local/bin/esper-login
 rm -rf .esper_venv
-```
+
 
 ⸻
 
@@ -266,3 +261,13 @@ This tool allows Esper employees to:
 	•	Avoid manual credential handling
 	•	Reduce errors and friction
 	•	Stay secure
+
+⸻
+
+If you want, next we can:
+	•	Add tenant auto-completion
+	•	Add interactive picker
+	•	Add macOS installer
+	•	Add audit logging
+
+Just say the word 👌
