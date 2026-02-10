@@ -42,22 +42,25 @@ esper-login <tenant-name>
 
 ⸻
 
-🔐 **Mission Control API Key (REQUIRED – Per User)**
+## 🔐 Mission Control API Key (REQUIRED – Per User)
 
-⚠️ IMPORTANT
-	•	Every user must use their own Mission Control API key
-	•	This key is personal and machine-specific
-	•	Never commit this key to GitHub
-	•	This repository does NOT include any API keys
+⚠️ **IMPORTANT**
 
-⸻
+- Every user must use their **own** Mission Control API key
+- This key is **personal and machine-specific**
+- **Never** commit this key to GitHub
+- This repository **does NOT include any API keys**
 
-🔎 **How to Get Your Mission Control API Key**
-	1.	Log in to Mission Control
-	2.	Open Chrome DevTools → Network
-	3.	Filter by Fetch / XHR
-	4.	Click any request to:
-```
+---
+
+## 🔎 How to Get Your Mission Control API Key
+
+1. Log in to **Mission Control**
+2. Open **Chrome DevTools → Network**
+3. Filter by **Fetch / XHR**
+4. Click any request to:
+
+```text
 mission-control-api.esper.cloud
 ```
 
