@@ -1,222 +1,259 @@
-# Esper Login Automation
+Esper Login Automation
 
-A simple automation tool to:
-- Fetch tenants from Mission Control  
-- Generate Personal Access Tokens  
-- Auto-launch browser & log in using Playwright  
-- Quickly switch between any customer tenant  
+A lightweight CLI tool to quickly log into any Esper tenant using Mission Control.
 
----
+This tool:
+	•	Fetches all tenants from Mission Control
+	•	Generates a fresh Personal Access Token for the tenant
+	•	Opens the tenant login page
+	•	Automatically pastes the token and logs you in
+	•	Keeps the browser open for normal dashboard usage
 
-## Installation (Two Options)
+⸻
 
----
+✨ What Problem This Solves
 
-# OPTION 1 — **Using Virtual Environment (Recommended)**
+Normally, to log into a customer tenant you must:
+	1.	Open Mission Control
+	2.	Search for tenant
+	3.	Click View Credentials
+	4.	Generate token
+	5.	Copy token
+	6.	Open tenant URL
+	7.	Paste token
+	8.	Login
 
-### 1. Create project folder
-```bash
-mkdir esper-login
-cd esper-login
-
-2. Create virtual environment
-
-python3 -m venv .esper_venv
-
-3. Activate it
-
-source .esper_venv/bin/activate
-
-4. Install dependencies
-
-pip install requests playwright
-playwright install
+This tool reduces that to one command:
+```
+esper-login <tenant-name>
+```
 
 
 ⸻
 
-OPTION 2 — WITHOUT Virtual Environment
+📦 Prerequisites
+	•	macOS
+	•	Python 3.9+
+	•	Google Chrome (or Chromium)
+	•	Access to Mission Control (mc.esper.io)
 
-If you don’t want venv:
+⸻
 
+🔐 Mission Control API Key (REQUIRED – Per User)
+
+⚠️ IMPORTANT
+	•	Every user must use their own Mission Control API key
+	•	This key is personal and machine-specific
+	•	Never commit this key to GitHub
+	•	This repository does NOT include any API keys
+
+⸻
+
+🔎 How to Get Your Mission Control API Key
+	1.	Log in to https://mc.esper.io
+	2.	Open Chrome DevTools → Network tab
+	3.	Filter by Fetch / XHR
+	4.	Click any request to:
+
+```
+mission-control-api.esper.cloud
+```
+
+	5.	In Request Headers, copy the value of:
+
+```
+authorization
+```
+
+
+This is your Mission Control API key.
+
+⸻
+
+✅ Set the API Key in Terminal
+
+```
+export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"
+```
+(Optional – persist across sessions)
+```
+echo 'export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+⸻
+
+🛠 Installation
+
+You have two options.
+
+⸻
+
+OPTION 1 — Using Virtual Environment (Recommended)
+
+1️⃣ Clone the repo
+
+```
+git clone https://github.com/SDPSHETTY/esper-login.git
+cd esper-login
+```
+
+2️⃣ Create virtual environment
+```
+python3 -m venv .esper_venv
+```
+3️⃣ Activate it
+```
+source .esper_venv/bin/activate
+```
+You should see:
+```
+(.esper_venv)
+```
+4️⃣ Install dependencies
+```
+pip install -r requirements.txt
+playwright install
+```
+
+⸻
+
+OPTION 2 — Without Virtual Environment
+
+⚠️ Use this only if you know what you’re doing.
+```
 pip3 install --user requests playwright
 playwright install
-
-⚠️ Must use python3 and pip3.
-⚠️ Avoid sudo pip (breaks macOS).
+```
 
 ⸻
 
-⚙️ Setup
+🚀 Install CLI Command
 
-1. Export your Mission Control API key
-
-export MC_API_KEY="YOUR_MC_KEY_HERE"
-
-Example:
-
-export MC_API_KEY="4ad91703-6dd3-4d52-9377-c2d6a31ee723"
-
-You can add it permanently:
-
-echo 'export MC_API_KEY="4ad91703-6dd3-4d52-9377-c2d6a31ee723"' >> ~/.zshrc
-
-
-⸻
-
-📌 Install CLI wrapper
-
-Create:
-
+From the project directory:
+```
+chmod +x esper_login.py
+sudo cp esper_login.py /usr/local/bin/esper-login
+```
+Verify:
+```
+which esper-login
+```
+Expected:
+```
 /usr/local/bin/esper-login
-
-Paste:
-
-#!/bin/bash
-python3 /usr/local/bin/esper_login.py "$@"
-
-Make executable:
-
-sudo chmod +x /usr/local/bin/esper-login
-
+```
 
 ⸻
 
-📜 Python Script
+▶️ Usage
+```
+esper-login <tenant-name>
+```
 
-Save the script below as:
-
-/usr/local/bin/esper_login.py
-
-#!/usr/bin/env python3
-import os
-import sys
-import requests
-from playwright.sync_api import sync_playwright
-
-MC_COMPANY_API = "https://mission-control-api.esper.cloud/api/06-2020/mission-control/companies"
-TOKEN_API_TEMPLATE = "https://mission-control-api.esper.cloud/api/06-2020/mission-control/companies/{}/personal-access-token"
-
-def fetch_companies(api_key):
-    headers = {"authorization": api_key, "accept": "*/*"}
-    res = requests.get(MC_COMPANY_API, headers=headers)
-
-    if res.status_code != 200:
-        print(f"ERROR fetching companies: {res.status_code}")
-        print(res.text)
-        sys.exit(1)
-
-    return res.json()
-
-def generate_api_token(company_id, api_key):
-    token_url = TOKEN_API_TEMPLATE.format(company_id)
-    headers = {"authorization": api_key, "accept": "*/*"}
-    
-    res = requests.post(token_url, headers=headers)
-
-    if res.status_code != 200:
-        print("\nERROR generating API token")
-        print(res.status_code, res.text)
-        sys.exit(1)
-
-    data = res.json()
-    return data.get("apiKey")
-
-def auto_login(endpoint, token):
-    login_url = f"https://{endpoint}.esper.cloud/login?siteadmin=true"
-
-    print("\nOpening browser:", login_url)
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
-        page.goto(login_url)
-
-        # Wait for API Token field
-        page.wait_for_selector("input[placeholder='API Token']")
-        page.fill("input[placeholder='API Token']", token)
-
-        # Click Login button
-        page.click("button[data-testid='siteadmin-login-login-button']")
-
-        print("Login submitted!")
-        page.wait_for_timeout(5000)
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: esper-login <tenant-name>")
-        sys.exit(1)
-
-    tenant_name = sys.argv[1].lower()
-    api_key = os.getenv("MC_API_KEY")
-
-    if not api_key:
-        print("ERROR: MC_API_KEY missing")
-        sys.exit(1)
-
-    print("Fetching companies...")
-    companies = fetch_companies(api_key)
-    items = companies.get("data", [])
-
-    tenant = None
-    for c in items:
-        if c.get("endpoint", "").lower() == tenant_name:
-            tenant = c
-            break
-
-    if not tenant:
-        print(f"Tenant '{tenant_name}' not found")
-        sys.exit(1)
-
-    print("\n=== TENANT FOUND ===")
-    print("Name:", tenant.get("name"))
-    print("Endpoint:", tenant.get("endpoint"))
-    print("ID:", tenant.get("id"))
-
-    print("\nGenerating API token...")
-    token = generate_api_token(tenant["id"], api_key)
-
-    print("API Key:", token)
-
-    auto_login(tenant["endpoint"], token)
-
-if __name__ == "__main__":
-    main()
-
+What happens:
+	1.	Tenant is located via Mission Control
+	2.	A fresh API token is generated
+	3.	Browser opens automatically
+	4.	Token is pasted
+	5.	Login is submitted
+	6.	Browser stays open until you press ENTER
 
 ⸻
 
-🧪 Example Usage
+🧠 How Matching Works (Important)
 
-esper-login guvrqy
+Tenant lookup uses exact endpoint match first, then safe partial match.
 
-esper-login dinedev
+This avoids mistakes like:
+	•	dillardstest accidentally matching dillardstestdev
 
-esper-login tkdwq
-
+If multiple matches exist, the script fails safely instead of guessing.
 
 ⸻
 
-🔥 How It Works
-	1.	Reads tenant list from Mission Control
-	2.	Finds correct tenant by endpoint
-	3.	Generates fresh token using personal-access-token API
-	4.	Launches login page
-	5.	Pastes token
-	6.	Auto-clicks Login
+🧪 How It Works (Internals)
+	1.	Calls Mission Control:
+```
+GET /companies
+```
+
+	2.	Finds matching tenant by endpoint
+	3.	Generates token:
+
+```
+POST /companies/{id}/personal-access-token
+```
+
+	4.	Opens:
+```
+https://<tenant>.esper.cloud/login?siteadmin=true
+```
+
+	5.	Uses Playwright to:
+	•	Paste token
+	•	Click Login
 
 ⸻
 
 🐛 Troubleshooting
 
-If you get MC_API_KEY missing:
-
+❌ MC_API_KEY missing
+```
 export MC_API_KEY="your-key"
+```
 
-If Playwright fails:
+⸻
 
-playwright install
+❌ ModuleNotFoundError: requests
 
-If script permission denied:
+Make sure you installed dependencies inside the active venv:
+```
+pip install -r requirements.txt
+```
 
-sudo chmod +x /usr/local/bin/esper-login
+⸻
+
+❌ Browser opens then closes
+
+This means:
+	•	The script exited
+	•	Or ENTER was pressed
+
+The browser stays open until you press ENTER in terminal.
+
+⸻
+
+❌ 401 Unauthorized
+
+Your Mission Control API key:
+	•	Expired, or
+	•	Belongs to a different user
+
+Get a fresh key from DevTools.
+
+⸻
+
+🔐 Security Notes
+	•	❌ Never commit API keys
+	•	❌ Never hardcode credentials
+	•	✅ Keys are read from environment only
+	•	✅ Tokens are generated fresh per login
+
+⸻
+
+🧹 Uninstall / Reset
+```
+sudo rm /usr/local/bin/esper-login
+rm -rf .esper_venv
+```
+
+⸻
+
+📌 Summary
+
+This tool allows Esper employees to:
+	•	Log into any tenant in seconds
+	•	Avoid manual credential handling
+	•	Reduce errors and friction
+	•	Stay secure
