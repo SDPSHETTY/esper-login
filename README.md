@@ -75,7 +75,9 @@ This is your Mission Control API key.
 ```
 export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"
 ```
+
 (Optional – persist across sessions)
+
 ```
 echo 'export MC_API_KEY="PASTE_YOUR_OWN_KEY_HERE"' >> ~/.zshrc
 source ~/.zshrc
@@ -121,6 +123,7 @@ playwright install
 OPTION 2 — Without Virtual Environment
 
 ⚠️ Use this only if you know what you’re doing.
+
 ```
 pip3 install --user requests playwright
 playwright install
@@ -131,15 +134,20 @@ playwright install
 🚀 Install CLI Command
 
 From the project directory:
+
 ```
 chmod +x esper_login.py
 sudo cp esper_login.py /usr/local/bin/esper-login
 ```
+
 Verify:
+
 ```
 which esper-login
 ```
+
 Expected:
+
 ```
 /usr/local/bin/esper-login
 ```
@@ -147,6 +155,7 @@ Expected:
 ⸻
 
 ▶️ Usage
+
 ```
 esper-login <tenant-name>
 ```
