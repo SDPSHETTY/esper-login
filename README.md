@@ -14,14 +14,15 @@ This tool:
 ✨ **What Problem This Solves**
 
 Normally, to log into a customer tenant you must:
-	1.	Open Mission Control
-	2.	Search for tenant
-	3.	Click View Credentials
-	4.	Generate token
-	5.	Copy token
-	6.	Open tenant URL
-	7.	Paste token
-	8.	Login
+
+1. Open Mission Control  
+2. Search for tenant  
+3. Click **View Credentials**  
+4. Generate token  
+5. Copy token  
+6. Open tenant URL  
+7. Paste token  
+8. Login  
 
 This tool reduces that to one command:
 
