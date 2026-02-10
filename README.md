@@ -170,23 +170,24 @@ esper-login <tenant-name>
 
 🐛 Troubleshooting
 
-❌ MC_API_KEY missing
-
+❌ **MC_API_KEY missing**
+```
 export MC_API_KEY="your-key"
-
+```
 
 ⸻
 
-❌ ModuleNotFoundError: requests
+❌ **ModuleNotFoundError: requests**
 
 Ensure dependencies are installed inside the active venv:
 
+```
 pip install -r requirements.txt
-
+```
 
 ⸻
 
-❌ Browser opens then closes
+❌ **Browser opens then closes**
 
 This means:
 	•	The script exited, or
@@ -196,7 +197,7 @@ The browser stays open until ENTER is pressed.
 
 ⸻
 
-❌ 401 Unauthorized
+❌ **401 Unauthorized**
 
 Your Mission Control API key is:
 	•	Expired, or
@@ -216,9 +217,10 @@ Get a fresh key from DevTools.
 
 🧹 Uninstall / Reset
 
+```
 sudo rm /usr/local/bin/esper-login
 rm -rf .esper_venv
-
+```
 
 ⸻
 
