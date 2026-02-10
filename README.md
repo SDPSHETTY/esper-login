@@ -47,9 +47,9 @@ esper-login <tenant-name>
 ⚠️ **IMPORTANT**
 
 - Every user must use their **own** Mission Control API key
-- This key is **personal and machine-specific**
+-** This key is **personal and machine-specific**
 - **Never** commit this key to GitHub
-- This repository **does NOT include any API keys**
+- This repository **does NOT include any API keys****
 
 ---
 
