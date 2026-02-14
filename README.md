@@ -1,222 +1,314 @@
 # Esper Login Automation
 
-A simple automation tool to:
-- Fetch tenants from Mission Control  
-- Generate Personal Access Tokens  
-- Auto-launch browser & log in using Playwright  
-- Quickly switch between any customer tenant  
+<div align="center">
 
----
+**A lightweight CLI tool to quickly log into any Esper tenant using Mission Control**
 
-## Installation (Two Options)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://python.org)
+[![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)](https://www.apple.com/macos)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
+[![Esper](https://img.shields.io/badge/Built%20for-Esper-orange.svg)](https://esper.io)
 
----
+</div>
 
-# OPTION 1 — **Using Virtual Environment (Recommended)**
+## 📋 Table of Contents
 
-### 1. Create project folder
+- [Overview](#overview)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+## 🔍 Overview
+
+Esper Login Automation streamlines the tenant login process for Esper employees and partners. Instead of manually navigating through Mission Control, generating tokens, and opening browsers, this tool reduces the entire workflow to a single command.
+
+### Why This Tool?
+- **⚡ Speed**: Login to any tenant in seconds
+- **🔒 Security**: Generates fresh API tokens for each session
+- **🎯 Accuracy**: Eliminates manual errors in tenant selection
+- **🔄 Automation**: Uses Playwright for reliable browser automation
+
+## ✨ Features
+
+- **🚀 One-Command Login**: `esper-login tenant-name`
+- **🔍 Smart Tenant Matching**: Fuzzy matching for tenant names
+- **🔐 Secure Token Generation**: Fresh API tokens for each session
+- **🌐 Browser Automation**: Automated login flow using Playwright
+- **📊 Clear Feedback**: Informative console output and error handling
+- **⚙️ Environment-Based**: Secure credential management
+
+## 📋 Prerequisites
+
+### System Requirements
+- **macOS** (tested on Big Sur and newer)
+- **Python 3.9+**
+- **Google Chrome** or **Chromium**
+
+### Required Credentials
+- **Mission Control API Key** (user-specific, never commit to GitHub)
+- **Esper employee access** to Mission Control
+
+## 🛠 Installation
+
+### Option 1: Recommended (Virtual Environment)
+
 ```bash
-mkdir esper-login
+# Clone the repository
+git clone https://github.com/SDPSHETTY/esper-login.git
 cd esper-login
 
-2. Create virtual environment
-
+# Create and activate virtual environment
 python3 -m venv .esper_venv
-
-3. Activate it
-
 source .esper_venv/bin/activate
 
-4. Install dependencies
+# Install dependencies
+pip install -r requirements.txt
+playwright install chromium
 
-pip install requests playwright
-playwright install
+# Make CLI available globally
+chmod +x esper_login.py
+sudo cp esper_login.py /usr/local/bin/esper-login
+```
 
+### Option 2: Quick Install Script
 
-⸻
+```bash
+# Clone and run install script
+git clone https://github.com/SDPSHETTY/esper-login.git
+cd esper-login
+chmod +x install.sh
+./install.sh
+```
 
-OPTION 2 — WITHOUT Virtual Environment
+### Option 3: Direct Installation (Not Recommended)
 
-If you don’t want venv:
-
+```bash
+# Install dependencies globally
 pip3 install --user requests playwright
-playwright install
+playwright install chromium
 
-⚠️ Must use python3 and pip3.
-⚠️ Avoid sudo pip (breaks macOS).
+# Clone and setup CLI
+git clone https://github.com/SDPSHETTY/esper-login.git
+cd esper-login
+chmod +x esper_login.py
+sudo cp esper_login.py /usr/local/bin/esper-login
+```
 
-⸻
+## ⚙️ Configuration
 
-⚙️ Setup
+### Set Your Mission Control API Key
 
-1. Export your Mission Control API key
+**⚠️ Security Notice**: Never commit your API key to version control!
 
-export MC_API_KEY="YOUR_MC_KEY_HERE"
+```bash
+# Add to your shell profile (.zshrc, .bash_profile, etc.)
+export MISSION_CONTROL_API_KEY="your_personal_api_key_here"
 
-Example:
+# Reload your shell or run:
+source ~/.zshrc  # or ~/.bash_profile
+```
 
-export MC_API_KEY="4ad91703-6dd3-4d52-9377-c2d6a31ee723"
+### Verify Installation
 
-You can add it permanently:
+```bash
+# Check if command is available
+which esper-login
 
-echo 'export MC_API_KEY="4ad91703-6dd3-4d52-9377-c2d6a31ee723"' >> ~/.zshrc
+# Test basic functionality (without tenant)
+esper-login --help
+```
 
+## 📱 Usage
 
-⸻
+### Basic Usage
 
-📌 Install CLI wrapper
+```bash
+# Login to a specific tenant
+esper-login my-tenant-name
 
-Create:
+# Examples with real tenant names
+esper-login demo-retail
+esper-login healthcare-pilot
+esper-login warehouse-kiosk
+```
 
-/usr/local/bin/esper-login
+### Advanced Usage
 
-Paste:
+```bash
+# Use full tenant endpoint URL
+esper-login https://my-tenant.esper.cloud
 
-#!/bin/bash
-python3 /usr/local/bin/esper_login.py "$@"
+# Verbose output for debugging
+esper-login my-tenant --verbose
 
-Make executable:
+# Dry run (fetch tenant info without login)
+esper-login my-tenant --dry-run
+```
 
+### Workflow Process
+
+1. **🔍 Tenant Discovery**: Searches Mission Control for matching tenants
+2. **🔐 Token Generation**: Creates fresh API token for the session
+3. **🌐 Browser Launch**: Opens tenant login page automatically
+4. **⚡ Auto-Login**: Completes authentication flow
+5. **✅ Ready**: Tenant dashboard opens, ready for use
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"API key not found" Error:**
+```bash
+# Verify environment variable
+echo $MISSION_CONTROL_API_KEY
+
+# If empty, add to shell profile
+echo 'export MISSION_CONTROL_API_KEY="your_key"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**"Tenant not found" Error:**
+```bash
+# Try partial tenant name
+esper-login demo
+
+# Use full URL if exact name fails
+esper-login https://demo-tenant.esper.cloud
+```
+
+**Browser Automation Fails:**
+```bash
+# Reinstall Playwright browsers
+playwright install chromium
+
+# Check Chrome/Chromium installation
+which google-chrome
+which chromium
+```
+
+**Permission Denied:**
+```bash
+# Fix CLI permissions
+chmod +x /usr/local/bin/esper-login
+
+# Or reinstall with proper permissions
+sudo cp esper_login.py /usr/local/bin/esper-login
 sudo chmod +x /usr/local/bin/esper-login
+```
 
+### Debug Mode
 
-⸻
+```bash
+# Enable verbose logging
+export DEBUG_ESPER_LOGIN=1
+esper-login my-tenant
+```
 
-📜 Python Script
+## 👨‍💻 Development
 
-Save the script below as:
+### Local Development Setup
 
-/usr/local/bin/esper_login.py
+```bash
+# Clone and setup development environment
+git clone https://github.com/SDPSHETTY/esper-login.git
+cd esper-login
 
-#!/usr/bin/env python3
-import os
-import sys
-import requests
-from playwright.sync_api import sync_playwright
+# Create development environment
+python3 -m venv dev-env
+source dev-env/bin/activate
 
-MC_COMPANY_API = "https://mission-control-api.esper.cloud/api/06-2020/mission-control/companies"
-TOKEN_API_TEMPLATE = "https://mission-control-api.esper.cloud/api/06-2020/mission-control/companies/{}/personal-access-token"
+# Install development dependencies
+pip install -r requirements.txt
+pip install pytest black flake8 mypy
 
-def fetch_companies(api_key):
-    headers = {"authorization": api_key, "accept": "*/*"}
-    res = requests.get(MC_COMPANY_API, headers=headers)
-
-    if res.status_code != 200:
-        print(f"ERROR fetching companies: {res.status_code}")
-        print(res.text)
-        sys.exit(1)
-
-    return res.json()
-
-def generate_api_token(company_id, api_key):
-    token_url = TOKEN_API_TEMPLATE.format(company_id)
-    headers = {"authorization": api_key, "accept": "*/*"}
-    
-    res = requests.post(token_url, headers=headers)
-
-    if res.status_code != 200:
-        print("\nERROR generating API token")
-        print(res.status_code, res.text)
-        sys.exit(1)
-
-    data = res.json()
-    return data.get("apiKey")
-
-def auto_login(endpoint, token):
-    login_url = f"https://{endpoint}.esper.cloud/login?siteadmin=true"
-
-    print("\nOpening browser:", login_url)
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
-        page.goto(login_url)
-
-        # Wait for API Token field
-        page.wait_for_selector("input[placeholder='API Token']")
-        page.fill("input[placeholder='API Token']", token)
-
-        # Click Login button
-        page.click("button[data-testid='siteadmin-login-login-button']")
-
-        print("Login submitted!")
-        page.wait_for_timeout(5000)
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: esper-login <tenant-name>")
-        sys.exit(1)
-
-    tenant_name = sys.argv[1].lower()
-    api_key = os.getenv("MC_API_KEY")
-
-    if not api_key:
-        print("ERROR: MC_API_KEY missing")
-        sys.exit(1)
-
-    print("Fetching companies...")
-    companies = fetch_companies(api_key)
-    items = companies.get("data", [])
-
-    tenant = None
-    for c in items:
-        if c.get("endpoint", "").lower() == tenant_name:
-            tenant = c
-            break
-
-    if not tenant:
-        print(f"Tenant '{tenant_name}' not found")
-        sys.exit(1)
-
-    print("\n=== TENANT FOUND ===")
-    print("Name:", tenant.get("name"))
-    print("Endpoint:", tenant.get("endpoint"))
-    print("ID:", tenant.get("id"))
-
-    print("\nGenerating API token...")
-    token = generate_api_token(tenant["id"], api_key)
-
-    print("API Key:", token)
-
-    auto_login(tenant["endpoint"], token)
-
-if __name__ == "__main__":
-    main()
-
-
-⸻
-
-🧪 Example Usage
-
-esper-login guvrqy
-
-esper-login dinedev
-
-esper-login tkdwq
-
-
-⸻
-
-🔥 How It Works
-	1.	Reads tenant list from Mission Control
-	2.	Finds correct tenant by endpoint
-	3.	Generates fresh token using personal-access-token API
-	4.	Launches login page
-	5.	Pastes token
-	6.	Auto-clicks Login
-
-⸻
-
-🐛 Troubleshooting
-
-If you get MC_API_KEY missing:
-
-export MC_API_KEY="your-key"
-
-If Playwright fails:
-
+# Install Playwright
 playwright install
+```
 
-If script permission denied:
+### Code Quality
 
-sudo chmod +x /usr/local/bin/esper-login
+```bash
+# Format code
+black esper_login.py
+
+# Check linting
+flake8 esper_login.py
+
+# Type checking
+mypy esper_login.py
+
+# Run tests
+pytest tests/
+```
+
+### Project Structure
+
+```
+esper-login/
+├── 📄 README.md                # Project documentation
+├── 📄 LICENSE                  # MIT license
+├── 📄 requirements.txt         # Python dependencies
+├── 🐍 esper_login.py          # Main CLI script
+├── 📜 install.sh              # Installation script
+├── 🙈 .gitignore              # Git exclusions
+├── 🧪 tests/                  # Unit tests (future)
+└── 📋 CHANGELOG.md            # Version history
+```
+
+## 🎯 Roadmap
+
+### Planned Features
+- **🔍 Interactive Tenant Picker**: Browse available tenants
+- **📝 Configuration File**: Save preferred settings
+- **🏗 Cross-Platform**: Linux and Windows support
+- **📊 Usage Analytics**: Track login patterns
+- **🔐 Enhanced Security**: Token rotation and expiry handling
+
+### Version History
+- **v1.0.0**: Initial release with basic login automation
+- **v1.1.0**: (Planned) Interactive tenant selection
+- **v1.2.0**: (Planned) Configuration file support
+
+## 🤝 Contributing
+
+We welcome contributions from Esper employees and partners! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Quick Start for Contributors
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/my-feature`
+3. Make changes and test thoroughly
+4. Submit pull request with clear description
+
+## 🔒 Security
+
+### Security Considerations
+- **API Key Protection**: Never commit API keys to version control
+- **Token Management**: Fresh tokens generated for each session
+- **Credential Storage**: Use environment variables only
+- **Browser Security**: Automated browser runs in secure context
+
+### Reporting Issues
+For security issues, please contact the maintainer directly rather than opening public issues.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Related Resources
+
+- **[Esper Documentation](https://docs.esper.io/)** - Complete platform documentation
+- **[Mission Control](https://esper.io/mission-control/)** - Esper's management console
+- **[Playwright Documentation](https://playwright.dev/python/)** - Browser automation library
+
+---
+
+<div align="center">
+<b>Streamlining Esper Tenant Access</b><br>
+<sub>Built for Esper employees and partners • Developed by Sudeep Shetty</sub>
+</div>
