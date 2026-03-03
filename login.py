@@ -9,19 +9,16 @@ from playwright.sync_api import sync_playwright
 
 # Rich UI imports for enhanced terminal experience
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
-from rich.prompt import Prompt, Confirm
-from rich.layout import Layout
-from rich.live import Live
-from rich.align import Align
-from rich.columns import Columns
-import click
-import configparser
+from rich.prompt import Prompt
 import keyring
 from datetime import datetime
+
+
+class EsperLoginError(Exception):
+    """Custom exception for Esper Login application errors"""
+    pass
 
 MC_BASE = "https://mission-control-api.esper.cloud/api/06-2020/mission-control"
 COMPANIES_URL = f"{MC_BASE}/companies/?current=1&pageSize=5000"
@@ -41,14 +38,15 @@ def fetch_companies(api_key: str):
         try:
             res = requests.get(COMPANIES_URL, headers=headers, timeout=30)
             if res.status_code != 200:
+                sanitized_response = sanitize_error_message(res.text)
                 console.print(Panel(
                     f"[bold red]ERROR fetching companies:[/bold red]\n"
                     f"Status Code: {res.status_code}\n"
-                    f"Response: {res.text}",
+                    f"Response: {sanitized_response}",
                     title="🚨 API Error",
                     border_style="red"
                 ))
-                sys.exit(1)
+                raise EsperLoginError(f"Failed to fetch companies: HTTP {res.status_code}")
             return res.json()
         except requests.RequestException as e:
             console.print(Panel(
@@ -56,7 +54,7 @@ def fetch_companies(api_key: str):
                 title="🌐 Connection Error",
                 border_style="red"
             ))
-            sys.exit(1)
+            raise EsperLoginError(f"Network error fetching companies: {str(e)}")
 
 
 def generate_api_token(company_id: str, api_key: str) -> str:
@@ -68,25 +66,27 @@ def generate_api_token(company_id: str, api_key: str) -> str:
         try:
             res = requests.post(url, headers=headers, timeout=30)
             if res.status_code != 200:
+                sanitized_response = sanitize_error_message(res.text)
                 console.print(Panel(
                     f"[bold red]ERROR generating token:[/bold red]\n"
                     f"Status Code: {res.status_code}\n"
-                    f"Response: {res.text}",
+                    f"Response: {sanitized_response}",
                     title="🔑 Token Generation Error",
                     border_style="red"
                 ))
-                sys.exit(1)
+                raise EsperLoginError(f"Failed to generate token: HTTP {res.status_code}")
 
             data = res.json()
             token = data.get("token") or data.get("apiKey") or data.get("key")
 
             if not token:
+                sanitized_data = sanitize_error_message(str(data))
                 console.print(Panel(
-                    f"[bold red]ERROR: No API token returned:[/bold red]\n{data}",
+                    f"[bold red]ERROR: No API token returned:[/bold red]\n{sanitized_data}",
                     title="🔑 Token Missing",
                     border_style="red"
                 ))
-                sys.exit(1)
+                raise EsperLoginError("No API token found in response")
 
             return token
         except requests.RequestException as e:
@@ -95,7 +95,7 @@ def generate_api_token(company_id: str, api_key: str) -> str:
                 title="🌐 Connection Error",
                 border_style="red"
             ))
-            sys.exit(1)
+            raise EsperLoginError(f"Network error generating token: {str(e)}")
 
 
 def auto_login(endpoint: str, token: str):
@@ -109,10 +109,12 @@ def auto_login(endpoint: str, token: str):
     ))
 
     playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=False)
-    page = browser.new_page()
+    browser = None
 
     try:
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
+
         with console.status("[bold yellow]Loading login page..."):
             page.goto(login_url, timeout=60000)
 
@@ -144,8 +146,6 @@ def auto_login(endpoint: str, token: str):
         input()
 
         console.print("[bold yellow]Closing browser...[/bold yellow]")
-        browser.close()
-        playwright.stop()
 
     except Exception as e:
         console.print(Panel(
@@ -153,9 +153,19 @@ def auto_login(endpoint: str, token: str):
             title="🎭 Playwright Error",
             border_style="red"
         ))
-        browser.close()
-        playwright.stop()
-        sys.exit(1)
+        raise EsperLoginError(f"Browser automation failed: {str(e)}")
+
+    finally:
+        # Ensure cleanup always happens
+        if browser:
+            try:
+                browser.close()
+            except Exception:
+                pass  # Ignore cleanup errors
+        try:
+            playwright.stop()
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 def display_tenant_info(tenant_data):
@@ -212,7 +222,7 @@ def interactive_tenant_selector(companies_list):
 
             if choice.lower() == 'q':
                 console.print("[yellow]Goodbye! 👋[/yellow]")
-                sys.exit(0)
+                raise KeyboardInterrupt("User requested exit")
 
             choice_num = int(choice)
             if 1 <= choice_num <= min(len(items), 20):
@@ -256,12 +266,88 @@ def save_config(config_data):
         json.dump(config_data, f, indent=2)
 
 
-def save_session(tenant_info, token):
-    """Save session information for later use"""
+def migrate_tokens_to_keyring():
+    """Migrate any existing plaintext tokens to keyring storage"""
     config = load_config()
+    sessions = config.get("active_sessions", {})
+    migrated_count = 0
+
+    for endpoint, session_data in sessions.items():
+        # Check if token exists in plaintext
+        if "token" in session_data:
+            token = session_data["token"]
+            service_name = get_keyring_service_name(endpoint)
+
+            try:
+                # Store token in keyring
+                keyring.set_password(service_name, "api_token", token)
+                # Remove token from config
+                del session_data["token"]
+                migrated_count += 1
+            except Exception as e:
+                console.print(f"[yellow]Warning: Failed to migrate token for {endpoint}: {str(e)}[/yellow]")
+
+    if migrated_count > 0:
+        save_config(config)
+        console.print(f"[green]Migrated {migrated_count} tokens to secure storage.[/green]")
+
+    return migrated_count
+
+
+def get_keyring_service_name(endpoint):
+    """Generate a consistent keyring service name for an endpoint"""
+    return f"esper-login.{endpoint}"
+
+
+def sanitize_error_message(text):
+    """Sanitize error messages to prevent API key or token leakage"""
+    if not text:
+        return text
+
+    # Common patterns that might contain sensitive data
+    sensitive_patterns = [
+        # API keys (various formats)
+        (r'["\']?api[_-]?key["\']?\s*[:=]\s*["\']?[a-zA-Z0-9_.-]{20,}["\']?', 'API_KEY_REDACTED'),
+        (r'["\']?token["\']?\s*[:=]\s*["\']?[a-zA-Z0-9_.-]{20,}["\']?', 'TOKEN_REDACTED'),
+        (r'["\']?authorization["\']?\s*[:=]\s*["\']?[a-zA-Z0-9_.-]{20,}["\']?', 'AUTH_REDACTED'),
+        # Long alphanumeric strings that might be tokens/keys (20+ chars)
+        (r'\b[a-zA-Z0-9_.-]{32,}\b', 'SENSITIVE_DATA_REDACTED'),
+        # JWT patterns
+        (r'eyJ[a-zA-Z0-9_.-]+', 'JWT_REDACTED'),
+    ]
+
+    import re
+    sanitized = str(text)
+
+    for pattern, replacement in sensitive_patterns:
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+    # Limit length to prevent extremely long error dumps
+    if len(sanitized) > 500:
+        sanitized = sanitized[:500] + "...[truncated]"
+
+    return sanitized
+
+
+def save_session(tenant_info, token):
+    """Save session information with secure token storage"""
+    config = load_config()
+
+    # Store token securely in keyring
+    service_name = get_keyring_service_name(tenant_info["endpoint"])
+    try:
+        keyring.set_password(service_name, "api_token", token)
+    except Exception as e:
+        console.print(Panel(
+            f"[bold red]Failed to store token securely:[/bold red] {str(e)}\n"
+            f"[yellow]Token will not be saved for future use.[/yellow]",
+            title="🔐 Keyring Error",
+            border_style="red"
+        ))
+
+    # Store session metadata (without token)
     session_data = {
         "tenant": tenant_info,
-        "token": token,
         "login_time": datetime.now().isoformat(),
         "last_used": datetime.now().isoformat()
     }
@@ -280,85 +366,107 @@ def save_session(tenant_info, token):
 
 def main():
     """Enhanced main function with interactive features"""
-    # Handle different CLI modes
-    if len(sys.argv) >= 2:
-        if sys.argv[1] in ['--list', '-l']:
-            show_active_sessions()
-            return
-        elif sys.argv[1] in ['--switch', '-s'] and len(sys.argv) >= 3:
-            switch_to_session(sys.argv[2])
-            return
-        elif sys.argv[1] in ['--help', '-h']:
-            show_enhanced_help()
-            return
+    try:
+        # Migrate any existing plaintext tokens to secure storage
+        migrate_tokens_to_keyring()
 
-    # Check for API key
-    api_key = os.getenv("MC_API_KEY")
-    if not api_key:
-        console.print(Panel(
-            "[bold red]ERROR: MC_API_KEY not set[/bold red]\n\n"
-            "[yellow]Please set your Mission Control API key:[/yellow]\n"
-            "[cyan]export MC_API_KEY=\"YOUR_MC_API_KEY\"[/cyan]",
-            title="🔑 API Key Missing",
-            border_style="red"
-        ))
-        sys.exit(1)
+        # Handle different CLI modes
+        if len(sys.argv) >= 2:
+            if sys.argv[1] in ['--list', '-l']:
+                show_active_sessions()
+                return
+            elif sys.argv[1] in ['--switch', '-s'] and len(sys.argv) >= 3:
+                switch_to_session(sys.argv[2])
+                return
+            elif sys.argv[1] in ['--help', '-h']:
+                show_enhanced_help()
+                return
 
-    # Fetch companies
-    companies = fetch_companies(api_key)
-
-    items = companies.get("data")
-    if not isinstance(items, list):
-        console.print(Panel(
-            "[bold red]Invalid companies response[/bold red]",
-            title="🚨 API Response Error",
-            border_style="red"
-        ))
-        sys.exit(1)
-
-    # Handle tenant selection
-    if len(sys.argv) < 2:
-        # No argument provided - show interactive selector
-        selected_tenant = interactive_tenant_selector(companies)
-    else:
-        # Search for tenant by query
-        tenant_query = sys.argv[1].lower()
-        matches = []
-
-        for c in items:
-            endpoint = str(c.get("endpoint", "")).lower()
-            name = str(c.get("name", "")).lower()
-
-            if tenant_query in endpoint or tenant_query in name:
-                matches.append(c)
-
-        if not matches:
+        # Check for API key
+        api_key = os.getenv("MC_API_KEY")
+        if not api_key:
             console.print(Panel(
-                f"[bold red]Tenant '{tenant_query}' not found.[/bold red]\n\n"
-                f"[yellow]Try running '[cyan]login[/cyan]' without arguments for interactive selection.[/yellow]",
-                title="🔍 Tenant Not Found",
+                "[bold red]ERROR: MC_API_KEY not set[/bold red]\n\n"
+                "[yellow]Please set your Mission Control API key:[/yellow]\n"
+                "[cyan]export MC_API_KEY=\"YOUR_MC_API_KEY\"[/cyan]",
+                title="🔑 API Key Missing",
                 border_style="red"
             ))
-            sys.exit(1)
-        elif len(matches) == 1:
-            selected_tenant = matches[0]
+            return
+
+        # Fetch companies
+        companies = fetch_companies(api_key)
+
+        items = companies.get("data")
+        if not isinstance(items, list):
+            console.print(Panel(
+                "[bold red]Invalid companies response[/bold red]",
+                title="🚨 API Response Error",
+                border_style="red"
+            ))
+            raise EsperLoginError("Invalid companies response format")
+
+        # Handle tenant selection
+        if len(sys.argv) < 2:
+            # No argument provided - show interactive selector
+            selected_tenant = interactive_tenant_selector(companies)
         else:
-            # Multiple matches - show interactive selector with filtered results
-            console.print(f"[yellow]Multiple tenants match '{tenant_query}':[/yellow]")
-            filtered_companies = {"data": matches}
-            selected_tenant = interactive_tenant_selector(filtered_companies)
+            # Search for tenant by query
+            tenant_query = sys.argv[1].lower()
+            matches = []
 
-    # Display selected tenant info
-    display_tenant_info(selected_tenant)
+            for c in items:
+                endpoint = str(c.get("endpoint", "")).lower()
+                name = str(c.get("name", "")).lower()
 
-    # Generate token and login
-    console.print()
-    token = generate_api_token(selected_tenant["id"], api_key)
+                if tenant_query in endpoint or tenant_query in name:
+                    matches.append(c)
 
-    # Save session info
-    save_session(selected_tenant, token)
+            if not matches:
+                console.print(Panel(
+                    f"[bold red]Tenant '{tenant_query}' not found.[/bold red]\n\n"
+                    f"[yellow]Try running '[cyan]login[/cyan]' without arguments for interactive selection.[/yellow]",
+                    title="🔍 Tenant Not Found",
+                    border_style="red"
+                ))
+                return
+            elif len(matches) == 1:
+                selected_tenant = matches[0]
+            else:
+                # Multiple matches - show interactive selector with filtered results
+                console.print(f"[yellow]Multiple tenants match '{tenant_query}':[/yellow]")
+                filtered_companies = {"data": matches}
+                selected_tenant = interactive_tenant_selector(filtered_companies)
 
-    auto_login(selected_tenant["endpoint"], token)
+        # Display selected tenant info
+        display_tenant_info(selected_tenant)
+
+        # Generate token and login
+        console.print()
+        token = generate_api_token(selected_tenant["id"], api_key)
+
+        # Save session info
+        save_session(selected_tenant, token)
+
+        auto_login(selected_tenant["endpoint"], token)
+
+    except EsperLoginError as e:
+        console.print(Panel(
+            f"[bold red]Login failed:[/bold red] {str(e)}",
+            title="❌ Error",
+            border_style="red"
+        ))
+        sys.exit(1)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(0)
+    except Exception as e:
+        console.print(Panel(
+            f"[bold red]Unexpected error:[/bold red] {str(e)}",
+            title="💥 Unexpected Error",
+            border_style="red"
+        ))
+        sys.exit(1)
 
 
 def show_active_sessions():
@@ -413,7 +521,27 @@ def switch_to_session(endpoint):
 
     session_data = sessions[endpoint]
     tenant = session_data["tenant"]
-    token = session_data["token"]
+
+    # Retrieve token securely from keyring
+    service_name = get_keyring_service_name(endpoint)
+    try:
+        token = keyring.get_password(service_name, "api_token")
+        if not token:
+            console.print(Panel(
+                f"[bold red]Token not found in secure storage for '{endpoint}'.[/bold red]\n"
+                f"[yellow]Please run 'login {endpoint}' to authenticate again.[/yellow]",
+                title="🔐 Token Missing",
+                border_style="red"
+            ))
+            return
+    except Exception as e:
+        console.print(Panel(
+            f"[bold red]Failed to retrieve token from secure storage:[/bold red] {str(e)}\n"
+            f"[yellow]Please run 'login {endpoint}' to authenticate again.[/yellow]",
+            title="🔐 Keyring Error",
+            border_style="red"
+        ))
+        return
 
     console.print(f"[green]Switching to session: {tenant['name']} ({endpoint})[/green]")
     display_tenant_info(tenant)
